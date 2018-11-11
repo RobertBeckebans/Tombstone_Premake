@@ -13,6 +13,18 @@ newoption
 
 newoption
 {
+	trigger = "simpleball",
+	description = "Enable SimpleBall"
+}
+
+newoption
+{
+	trigger = "simplechar",
+	description = "Enable SimpleChar"
+}
+
+newoption
+{
 	trigger = "monolith",
 	description = "No Plugins"
 }
@@ -166,79 +178,49 @@ solution "Tombstone"
 	-- Debug/Release Configurations
 	--
 	configuration "Debug"
-		flags
-		{
-			"Symbols",
-			"EnableSSE",
-			"EnableSSE2",
-			--"StaticRuntime"
-		}
 		defines
 		{
-			"TOMBSTONE_DEBUG",
+			"TERATHON_DEBUG",
             "_DEBUG"
 		}
+		symbols "On"
+		vectorextensions "SSE"
+		warnings "Extra"
 		
-	if not os.is("windows") then
-		configuration "Profile"
-			defines
-			{
-				"TOMBSTONE_OPTIMIZED",
-				"NDEBUG",
-			}
-			flags
-			{
-				"OptimizeSpeed",
-				"EnableSSE",
-				"EnableSSE2",
-				"Symbols",
-			}
-	else
-		configuration "Profile"
-			flags
-			{
-				"StaticRuntime",
-				"OptimizeSpeed",
-				"EnableSSE",
-				"EnableSSE2",
-				"Symbols",
-			}
-			defines
-			{
-				"TOMBSTONE_OPTIMIZED",
-				"NDEBUG",
-			}
-	end
+	configuration "Profile"
+		defines
+		{
+			"NDEBUG",
+		}
+		symbols "On"
+		vectorextensions "SSE"
+		optimize "Speed"
+		warnings "Extra"
+			
+		if not os.is("windows") then
+			staticruntime "On"
+		end
 
 	configuration "Release"
-		flags
-		{
-			"OptimizeSpeed",
-			"EnableSSE",
-			"EnableSSE2",
-			--"StaticRuntime"
-		}
 		defines
 		{
-			"TOMBSTONE_OPTIMIZED",
 			"NDEBUG"
 		}
+		symbols "Off"
+		vectorextensions "SSE"
+		optimize "Speed"
+		warnings "Extra"
 
 	configuration "Retail"
-		flags
-		{
-			"OptimizeSpeed",
-			"EnableSSE",
-			"EnableSSE2",
-			--"StaticRuntime"
-		}
 		defines
 		{
-			"TOMBSTONE_OPTIMIZED",
-			"TOMBSTONE_RETAIL",
-			"NDEBUG"
+			"NDEBUG",
+			"TOMBSTONE_RETAIL"
 		}
-	
+		symbols "Off"
+		vectorextensions "SSE"
+		optimize "Speed"
+		warnings "Extra"
 	
 	configuration { "vs*" }
 		targetdir ".."
@@ -247,9 +229,9 @@ solution "Tombstone"
 			"NoManifest",
 			"NoMinimalRebuild",
 			"No64BitChecks",
-			"NoEditAndContinue",
 		}
 		exceptionhandling "Off"
+		editandcontinue "Off"
 		buildoptions
 		{
 			-- multi processor support
@@ -267,6 +249,7 @@ solution "Tombstone"
 		defines
 		{
 			"TOMBSTONE_WINDOWS",
+			"TERATHON_NO_SYSTEM"
 		}
 		
 	
@@ -288,13 +271,16 @@ solution "Tombstone"
 			"/Zi",
 			
 			-- turn off Whole Program Optimization
-			"/GL-",
+			--"/GL-",
 			
 			-- Inline Function Expansion: Any Suitable (/Ob2)
 			--"/Ob2",
 			
 			-- enable Intrinsic Functions
 			"/Oi",
+			
+			-- Favor fast code
+			"/Ot",
 			
 			-- Omit Frame Pointers - FIXME: maybe not for profile builds?
 			"/Oy",
@@ -312,10 +298,13 @@ solution "Tombstone"
 		buildoptions
 		{
 			-- turn off Whole Program Optimization
-			"/GL-",
+			--"/GL-",
 			
 			-- Inline Function Expansion: Any Suitable (/Ob2)
-			--"/Ob2",
+			"/Ob2",
+			
+			-- Favor fast code
+			"/Ot",
 			
 			-- enable Intrinsic Functions
 			"/Oi",
@@ -328,10 +317,10 @@ solution "Tombstone"
 		buildoptions
 		{
 			-- turn off Whole Program Optimization
-			"/GL-",
+			--"/GL-",
 			
 			-- Inline Function Expansion: Any Suitable (/Ob2)
-			--"/Ob2",
+			"/Ob2",
 			
 			-- enable Intrinsic Functions
 			"/Oi",
@@ -377,21 +366,24 @@ project "TombstoneApp"
 	targetname "Tombstone"
 	language "C++"
 	kind "WindowedApp"
-	flags
-	{
-		"ExtraWarnings",
-	}
 	files
 	{
+		"../TerathonCode/**.h", "../TerathonCode/**.cpp",
 		"../EngineCode/**.h", "../EngineCode/**.cpp",
+	}
+	excludes
+	{
+		"../TerathonCode/TSFontBuilder.h", "../TerathonCode/TSFontBuilder.cpp",
 	}
 	defines
 	{
+		"TERATHON_EXPORT",
 		"TOMBSTONE_ENGINE_MODULE",
 	}
 	includedirs
 	{
-		"../EngineCode"
+		"../TerathonCode",
+		"../EngineCode",
 	}
 	
 	if _OPTIONS["monolith"] then
@@ -494,23 +486,20 @@ if _OPTIONS["mygame"] then
 		targetname "MyGame"
 		language "C++"
 		kind "SharedLib"
-		flags
-		{
-			"ExtraWarnings",
-		}
 		files
 		{
 			"../MyGameCode/**.h", "../MyGameCode/**.cpp",
 		}
-		defines
-		{
-			"MYGAME"
-		}
 		includedirs
 		{
+			"../TerathonCode",
 			"../EngineCode",
-			"../PluginCode",
-			"../GameCode",
+			"../Plugins",
+		}
+		defines
+		{
+			"TERATHON_IMPORT",
+			"MYGAME",
 		}
 		
 		configuration "vs*"
@@ -547,18 +536,19 @@ if _OPTIONS["game31st"] then
 		targetname "The31st"
 		language "C++"
 		kind "SharedLib"
-		flags
-		{
-			"ExtraWarnings",
-		}
 		files
 		{
 			"../GameCode/**.h", "../GameCode/**.cpp",
 		}
 		includedirs
 		{
+			"../TerathonCode",
 			"../EngineCode",
 			"../Plugins",
+		}
+		defines
+		{
+			"TERATHON_IMPORT"
 		}
 	
 		configuration "vs*"
@@ -590,6 +580,101 @@ if _OPTIONS["game31st"] then
 end -- if not _OPTIONS["game31st"] then
 		
 			
+if _OPTIONS["simpleball"] then
+	project "SimpleBall"
+		targetname "SimpleBall"
+		language "C++"
+		kind "SharedLib"
+		files
+		{
+			"../SimpleCode/SimpleBall.h", "../SimpleCode/SimpleBall.cpp",
+		}
+		includedirs
+		{
+			"../TerathonCode",
+			"../EngineCode",
+			--"../Plugins",
+		}
+		defines
+		{
+			"TERATHON_IMPORT",
+		}
+		
+		configuration "vs*"
+			includedirs
+			{
+				"$(DXSDK_DIR)/include",
+			}
+			
+		configuration { "vs*", "x64" }
+			libdirs
+			{
+				"..",
+				--"../Plugins",
+			}
+			links
+			{
+				"TombstoneApp",
+				"Tombstone",
+			}
+		
+		configuration { "linux" }
+			buildoptions(COMMON_CXXFLAGS)
+		
+			linkoptions
+			{
+				"-Wl,-whole-archive"
+			}
+			
+end
+
+if _OPTIONS["simplechar"] then
+	project "SimpleChar"
+		targetname "SimpleChar"
+		language "C++"
+		kind "SharedLib"
+		files
+		{
+			"../SimpleCode/SimpleChar.h", "../SimpleCode/SimpleChar.cpp",
+		}
+		includedirs
+		{
+			"../TerathonCode",
+			"../EngineCode",
+			--"../Plugins",
+		}
+		defines
+		{
+			"TERATHON_IMPORT",
+		}
+		
+		configuration "vs*"
+			includedirs
+			{
+				"$(DXSDK_DIR)/include",
+			}
+			
+		configuration { "vs*", "x64" }
+			libdirs
+			{
+				"..",
+				--"../Plugins",
+			}
+			links
+			{
+				"TombstoneApp",
+				"Tombstone",
+			}
+		
+		configuration { "linux" }
+			buildoptions(COMMON_CXXFLAGS)
+		
+			linkoptions
+			{
+				"-Wl,-whole-archive"
+			}
+			
+end
 
 
 project "WorldEditor"
@@ -597,10 +682,6 @@ project "WorldEditor"
 	targetdir "../Plugins/Tools"
 	language "C++"
 	kind "SharedLib"
-	flags
-	{
-		"ExtraWarnings",
-	}
 	files
 	{
 		"../PluginCode/TSCameraDirectors.cpp",
@@ -702,10 +783,12 @@ project "WorldEditor"
 	}
 	defines
 	{
+		"TERATHON_IMPORT",
 		"TOMBSTONE_EDITOR",
 	}
 	includedirs
 	{
+		"../TerathonCode",
 		"../EngineCode",
 	}
 
@@ -754,10 +837,6 @@ project "TextureTool"
 	targetdir "../Plugins/Tools"
 	language "C++"
 	kind "SharedLib"
-	flags
-	{
-		"ExtraWarnings",
-	}
 	files
 	{
 		"../PluginCode/TSTerrainPalette.cpp",
@@ -773,10 +852,12 @@ project "TextureTool"
 	}
 	defines
 	{
+		"TERATHON_IMPORT",
 		"TOMBSTONE_TEXTURE",
 	}
 	includedirs
 	{
+		"../TerathonCode",
 		"../EngineCode",
 	}
 
@@ -813,10 +894,6 @@ project "ColladaImporter"
 	targetdir "../Plugins/Tools/Editor"
 	language "C++"
 	kind "SharedLib"
-	flags
-	{
-		"ExtraWarnings",
-	}
 	files
 	{
 		"../PluginCode/TSColladaImporter.cpp",
@@ -824,10 +901,11 @@ project "ColladaImporter"
 	}
 	defines
 	{
-		--"TOMBSTONE_TEXTURE",
+		"TERATHON_IMPORT",
 	}
 	includedirs
 	{
+		"../TerathonCode",
 		"../EngineCode",
 	}
 
@@ -861,10 +939,6 @@ project "OpenGexImporter"
 	targetdir "../Plugins/Tools/Editor"
 	language "C++"
 	kind "SharedLib"
-	flags
-	{
-		"ExtraWarnings",
-	}
 	files
 	{
 		"../PluginCode/TSOpenGexImporter.cpp",
@@ -872,10 +946,11 @@ project "OpenGexImporter"
 	}
 	defines
 	{
-		--"TOMBSTONE_TEXTURE",
+		"TERATHON_IMPORT",
 	}
 	includedirs
 	{
+		"../TerathonCode",
 		"../EngineCode",
 	}
 
@@ -906,25 +981,23 @@ project "OpenGexImporter"
 		
 project "FontImporter"
 	--targetname "FontGenerator"
-	targetdir "../Plugins/Tools/Fonts"
+	targetdir "../Plugins/Tools"
 	language "C++"
 	kind "SharedLib"
-	flags
-	{
-		"ExtraWarnings",
-	}
 	files
 	{
+		"../PluginCode/TSCharNames.cpp",
 		"../PluginCode/TSFontImporter.cpp",
 		"../PluginCode/TSFontImporter.h",
-		"../PluginCode/TSUnicode.cpp",
+		"../TerathonCode/TSFontBuilder.h", "../TerathonCode/TSFontBuilder.cpp",
 	}
 	defines
 	{
-		--"TOMBSTONE_TEXTURE",
+		"TERATHON_IMPORT",
 	}
 	includedirs
 	{
+		"../TerathonCode",
 		"../EngineCode",
 	}
 
@@ -953,13 +1026,9 @@ project "FontImporter"
 
 project "MovieTool"
 	--targetname "MovieTool"
-	targetdir "../Plugins/Tools"
+	targetdir "../Plugins/Tools/Movies"
 	language "C++"
 	kind "SharedLib"
-	flags
-	{
-		"ExtraWarnings",
-	}
 	files
 	{
 		"../PluginCode/TSMovieImporter.cpp",
@@ -971,10 +1040,11 @@ project "MovieTool"
 	}
 	defines
 	{
-		--"TOMBSTONE_TEXTURE",
+		"TERATHON_IMPORT",
 	}
 	includedirs
 	{
+		"../TerathonCode",
 		"../EngineCode",
 		"../Plugins",
 	}
@@ -1006,10 +1076,6 @@ project "ResourcePacker"
 	targetdir "../Plugins/Tools"
 	language "C++"
 	kind "SharedLib"
-	flags
-	{
-		"ExtraWarnings",
-	}
 	files
 	{
 		"../PluginCode/TSResourcePacker.cpp",
@@ -1017,10 +1083,11 @@ project "ResourcePacker"
 	}
 	defines
 	{
-		--"TOMBSTONE_TEXTURE",
+		"TERATHON_IMPORT",
 	}
 	includedirs
 	{
+		"../TerathonCode",
 		"../EngineCode",
 	}
 
@@ -1051,10 +1118,6 @@ project "SoundTool"
 	targetdir "../Plugins/Tools"
 	language "C++"
 	kind "SharedLib"
-	flags
-	{
-		"ExtraWarnings",
-	}
 	files
 	{
 		"../PluginCode/TSSoundImporter.cpp",
@@ -1066,10 +1129,12 @@ project "SoundTool"
 	}
 	defines
 	{
+		"TERATHON_IMPORT",
 		"TOMBSTONE_SOUND",
 	}
 	includedirs
 	{
+		"../TerathonCode",
 		"../EngineCode"
 	}
 
@@ -1100,10 +1165,6 @@ project "StringImporter"
 	targetdir "../Plugins/Tools"
 	language "C++"
 	kind "SharedLib"
-	flags
-	{
-		"ExtraWarnings",
-	}
 	files
 	{
 		"../PluginCode/TSStringImporter.cpp",
@@ -1111,10 +1172,11 @@ project "StringImporter"
 	}
 	defines
 	{
-		--"TOMBSTONE_TEXTURE",
+		"TERATHON_IMPORT",
 	}
 	includedirs
 	{
+		"../TerathonCode",
 		"../EngineCode",
 	}
 
